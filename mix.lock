@@ -1,0 +1,7 @@
+%{
+  "phoenix_pubsub": {:hex, :phoenix_pubsub, "2.0.0", "a1ae76717bb168cdeb10ec9d92d1480fec99e3080f011402c0a2d68d47395ffb", [:mix], [], "hexpm", "c52d948c4f261577b9c6fa804be91884b381a7f8f18450c5045975435350f771"},
+  "phoenix_pubsub_redis": {:hex, :phoenix_pubsub_redis, "3.0.0", "75a3f3908210196c499a961ab7cf7202e68947ba33994f9219dc153367ac8662", [:mix], [{:phoenix_pubsub, "~> 2.0", [hex: :phoenix_pubsub, repo: "hexpm", optional: false]}, {:poolboy, "~> 1.5.1 or ~> 1.6", [hex: :poolboy, repo: "hexpm", optional: false]}, {:redix, "~> 0.10.0", [hex: :redix, repo: "hexpm", optional: false]}], "hexpm", "57b4ac98239600340ae485976ae5400f39f48ce8741105e1709f4e16d0d60e92"},
+  "poolboy": {:hex, :poolboy, "1.5.2", "392b007a1693a64540cead79830443abf5762f5d30cf50bc95cb2c1aaafa006b", [:rebar3], [], "hexpm", "dad79704ce5440f3d5a3681c8590b9dc25d1a561e8f5a9c995281012860901e3"},
+  "redix": {:hex, :redix, "0.10.7", "758916c71fc09e223e18d6715344581d7768c430983dabf77e792ba2087729e6", [:mix], [{:castore, "~> 0.1.0", [hex: :castore, repo: "hexpm", optional: true]}, {:telemetry, "~> 0.4.0", [hex: :telemetry, repo: "hexpm", optional: false]}], "hexpm", "73fdf73c0472278dc040dcd1a5da91d4febe218201ae8ac0454b37e136886c34"},
+  "telemetry": {:hex, :telemetry, "0.4.2", "2808c992455e08d6177322f14d3bdb6b625fbcfd233a73505870d8738a2f4599", [:rebar3], [], "hexpm", "2d1419bd9dda6a206d7b5852179511722e2b18812310d304620c7bd92a13fcef"},
+}
