@@ -72,16 +72,18 @@ defmodule PubRaft.Peer do
   end
 
   def handle_info({:request_vote, from, term}, %State{} = state) do
-    log("Vote request from #{from} on term #{term}", state)
-
     case {check_term(term, state), check_vote(state)} do
       {:newer, :no_vote} ->
+        log("Voting for #{from} in term #{term}", state)
+
         PubSub.broadcast(state.psub, "gossip", {:respond_vote, state.node, term, from})
 
-        {:noreply, %{state | vote_for: from}}
+        {:noreply, schedule_timeout(%{state | vote_for: from})}
 
       _ ->
-        {:noreply, state}
+        log("Already voted in term #{term}", state)
+
+        {:noreply, schedule_timeout(state)}
     end
   end
 
@@ -105,29 +107,29 @@ defmodule PubRaft.Peer do
       {^vote, :same, :no_quorum} ->
         log("Received vote from #{from} on #{term}, no quorum yet", state)
 
-        {:noreply, record_vote(from, state)}
+        {:noreply, schedule_timeout(%{state | votes: [from | state.votes]})}
 
       {_vote, :newer, _quorum} ->
         log("Newer term (#{term}) discovered, falling back to follower", state)
 
-        {:noreply, %{state | mode: :follower, term: term}}
+        {:noreply, schedule_timeout(%{state | mode: :follower, term: term})}
 
       _ ->
         log("Received vote on term #{term} for another node", state)
 
-        {:noreply, state}
+        {:noreply, schedule_timeout(state)}
     end
   end
 
   def handle_info({:announce_leader, from, term}, %State{} = state) do
     case {state.node, term} do
       {^from, _term} ->
-        {:noreply, state}
+        {:noreply, schedule_timeout(state)}
 
       {_from, _term} ->
         log("Leader announced as #{from} for term #{term}, becoming follower", state)
 
-        {:noreply, %{state | leader: from, term: term, mode: :follower}}
+        {:noreply, schedule_timeout(%{state | leader: from, term: term, mode: :follower})}
     end
   end
 
@@ -140,7 +142,7 @@ defmodule PubRaft.Peer do
   # Logging Helpers
 
   defp log(message, state) do
-    Logger.debug(message, node: state.node, term: state.term, mode: state.mode)
+    Logger.debug(message, node: state.node, mode: state.mode)
   end
 
   # Timeout Helpers
@@ -163,6 +165,8 @@ defmodule PubRaft.Peer do
   # Candidate Helpers
 
   defp become_candidate(%State{} = state) do
+    log("Becoming a candidate in term #{state.term + 1}", state)
+
     state = %{state | leader: :none, mode: :candidate, term: state.term + 1}
 
     PubSub.broadcast(state.psub, "gossip", {:request_vote, state.node, state.term})
@@ -174,7 +178,7 @@ defmodule PubRaft.Peer do
     if state.mode == :candidate do
       become_candidate(state)
     else
-      {:noreply, state}
+      {:noreply, schedule_timeout(state)}
     end
   end
 
@@ -196,10 +200,6 @@ defmodule PubRaft.Peer do
 
   defp check_vote(%State{vote_for: nil}), do: :no_vote
   defp check_vote(_state), do: :voted
-
-  defp record_vote(from, state) do
-    %{state | votes: [from | state.votes]}
-  end
 
   defp check_quorum(from, state) do
     if length([from | state.votes]) >= state.size / 2 do

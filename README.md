@@ -23,9 +23,6 @@ be found at [https://hexdocs.pm/pubraft](https://hexdocs.pm/pubraft).
 # :candidate
 # :leader
 #
-# term
-# vote? (last voted for)
-#
 # nodes start in the :follower state
 # if they don't hear from a leader within N ms they become a candiate
 # candidates request votes from others, nodes reply with their votes

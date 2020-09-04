@@ -7,27 +7,33 @@ defmodule PubRaft do
 
   @impl Supervisor
   def init(opts) do
+    Logger.configure(level: :debug)
+
+    Logger.configure_backend(:console,
+      format: "\n$time $metadata$message",
+      metadata: [:node, :mode]
+    )
+
     psub = Keyword.fetch!(opts, :psub)
-    node = Keyword.fetch!(opts, :node)
     size = Keyword.fetch!(opts, :size)
 
     children = [
       {Phoenix.PubSub,
        adapter: Phoenix.PubSub.Redis,
        name: psub,
-       node_name: node,
+       node_name: Node.self(),
        url: "redis://localhost:6379/10"},
-      {PubRaft.Peer, node: node, psub: psub, size: size}
+      {PubRaft.Peer, node: Node.self(), psub: psub, size: size}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
 
   def leader(sup) do
-    [{PubRaft.Peer, pid, :worker, _}] =
+    {PubRaft.Peer, pid, :worker, _} =
       sup
       |> Supervisor.which_children()
-      |> Enum.filter(fn {module, _, _, _} -> module == PubRaft.Peer end)
+      |> List.first()
 
     GenServer.call(pid, :leader)
   end
