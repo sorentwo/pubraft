@@ -1,53 +1,60 @@
 # Pubraft
 
-**TODO: Add description**
+An implementation of Raft Leadership Election using Phoenix PubSub.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `pubraft` to your list of dependencies in `mix.exs`:
+Be sure you have Redis installed (or swap out the Phoenix.PubSub adapter). After
+cloning the repo install the dependencies:
 
 ```elixir
-def deps do
-  [
-    {:pubraft, "~> 0.1.0"}
-  ]
-end
+mix deps.get
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/pubraft](https://hexdocs.pm/pubraft).
+## Usage
 
-# :follower
-# :candidate
-# :leader
-#
-# nodes start in the :follower state
-# if they don't hear from a leader within N ms they become a candiate
-# candidates request votes from others, nodes reply with their votes
-# candidate becomes the leader if it gets votes from a majority of nodes
-#
-# Leader Election
-#
-# ### Election Timeout
-#
-# The amount of time a follower waits until becoming a candidate, randomized to be between 150ms
-# and 300ms.
-# After the election timeout the follower becomes a candidate and starts a new election term.
-# It votes for itself, bumping votes to 1
-# Then it sends out a :request_vote message to other nodes
-# If the receiving node hasn't voted yet in this term then it votes for the candidate, and the node resets its election timeout
-# Once a candidate has a majority of votes it becomes leader
-#
-# The leader starts sending out :append_entries messages to all followers
-# The messages are sent in intervals specified by the "heartbeat timeout"
-# Followers respond to each "append entries" message
-# This election term will continue until a follower stops receiving heartbeats and becomes a candidate
-#
-# Split vote example
-#
-# Two nodes start an election for the same term
-# They receive the same number of votes, 2, and are stuck at that level
-# Neither can get a majority so they wait to start a new term
+Start an iex session with a name or short name, which is necessary for node
+identification:
 
+```bash
+iex --sname alpha -S mix
+```
+
+Once `iex` has started you can start the `PubRaft` supervision tree:
+
+```elixir
+{:ok, sup} = PubRaft.start_link(psub: :my_pubsub, size: 3)
+```
+
+Without any other nodes to talk to the node will churn along logging out messages like this:
+
+```
+12:50:07.113 node=delta@SorenBook mode=follower Becoming a candidate in term 1
+12:50:07.119 node=delta@SorenBook mode=candidate Already voted in term 1
+12:50:08.320 node=delta@SorenBook mode=candidate Becoming a candidate in term 2
+12:50:08.320 node=delta@SorenBook mode=candidate Already voted in term 2
+12:50:09.522 node=delta@SorenBook mode=candidate Becoming a candidate in term 3
+12:50:09.523 node=delta@SorenBook mode=candidate Already voted in term 3
+```
+
+To elect a leader you'll need at least one more node, or preferrably two. Start
+another shell and bring up another uniquely named node (beta, gamma, etc), then
+start `PubRaft` again.
+
+Now you should see a leader announced:
+
+```
+22:49:18.335 node=delta@SorenBook mode=follower Voting for gamma@SorenBook in term 2
+22:49:18.340 node=delta@SorenBook mode=follower Newer term (2) discovered, falling back to follower
+22:49:18.341 node=delta@SorenBook mode=follower Leader announced as gamma@SorenBook for term 2, becoming follower
+```
+
+And you can verify that from any console by asking who the leader is:
+
+```elixir
+PubRaft.leader(sup)
+# => gamma@local
+```
+
+Terminate an iex session, bring it back up, and have fun playing with leadership
+election.

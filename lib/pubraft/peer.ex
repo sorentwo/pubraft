@@ -5,8 +5,8 @@ defmodule PubRaft.Peer do
 
   alias Phoenix.PubSub
 
-  @heartbeat_timeout 150
-  @election_timeout_range 300..600
+  @heartbeat_timeout 75
+  @election_timeout_range 150..1200
 
   defmodule State do
     defstruct [
@@ -79,6 +79,11 @@ defmodule PubRaft.Peer do
         PubSub.broadcast(state.psub, "gossip", {:respond_vote, state.node, term, from})
 
         {:noreply, schedule_timeout(%{state | vote_for: from})}
+
+      {:newer, _vote} ->
+        log("Newer term detected, #{term}, falling back", state)
+
+        {:noreply, schedule_timeout(%{state | mode: :follower, vote_for: nil})}
 
       _ ->
         log("Already voted in term #{term}", state)
